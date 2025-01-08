@@ -770,8 +770,8 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
   end
   file:close()
   for key, data in pairs({
-    --["livestream-ho0h30sdf854ze45"] = discovered_items,
-    --["urls-2xwc1mibb87ii6n3"] = discovered_outlinks
+    ["livestream-ho0h30sdf854ze45"] = discovered_items,
+    ["urls-2xwc1mibb87ii6n3"] = discovered_outlinks
   }) do
     print("queuing for", string.match(key, "^(.+)%-"))
     local items = nil
