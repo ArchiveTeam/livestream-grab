@@ -649,7 +649,11 @@ wget.callbacks.write_to_warc = function(url, http_stat)
   end
   is_initial_url = false
   if http_stat["statcode"] ~= 200
-    and http_stat["statcode"] ~= 301 then
+    and http_stat["statcode"] ~= 301
+    and (
+      not string.match(url["url"], "/follow[ei][rn][sg]%?page=[0-9]+&maxItems=[0-9]+$")
+      or http_stat["statcode"] ~= 400
+    ) then
     retry_url = true
     return false
   end
@@ -700,6 +704,10 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:flush()
     tries = tries + 1
     local maxtries = 5
+    if string.match(url["url"], "/api/accounts/[0-9]+$")
+      and status_code == 404 then
+      tries = 6
+    end
     if tries > maxtries then
       io.stdout:write(" Skipping.\n")
       io.stdout:flush()
