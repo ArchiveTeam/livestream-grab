@@ -88,9 +88,9 @@ find_item = function(url)
     ["^https?://livestream%.com/api/accounts/([0-9]+/events/[0-9]+/videos/[0-9]+)$"]="video",
     ["^https?://livestream%.com/api/accounts/([0-9]+/events/[0-9]+/statuses/[0-9]+)$"]="status",
     ["^https?://livestream%.com/api/accounts/([0-9]+/events/[0-9]+/images/[0-9]+)$"]="image",
-    ["^(https?://cdn%.livestream%.com/.+)$"]="asset",
-    ["^(https?://vpe%-cdn%.livestream%.com/.+)$"]="asset",
-    ["^(https?://img%.new%.livestream%.com/.+)$"]="asset"
+    ["^https?://(cdn%.livestream%.com/.+)$"]="asset",
+    ["^https?://(vpe%-cdn%.livestream%.com/.+)$"]="asset",
+    ["^https?://(img%.new%.livestream%.com/.+)$"]="asset"
   }) do
     value = string.match(url, pattern)
     type_ = name
