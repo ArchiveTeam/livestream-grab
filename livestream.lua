@@ -423,7 +423,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   end
 
   if allowed(url)
-    and status_code < 300 then
+    and status_code < 300
+    and item_type ~= "asset" then
     html = read_file(file)
     if string.match(html, "^%s*{") then
       json = cjson.decode(html)
