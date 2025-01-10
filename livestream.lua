@@ -109,7 +109,7 @@ end
 set_item = function(url)
   found = find_item(url)
   if found then
-    local newcontext = {}
+    local newcontext = {["m3u8"]={},["ts"]={}}
     new_item_type = found["type"]
     if new_item_type == "event" or new_item_type == "video" or new_item_type == "status" or new_item_type == "image" then
       local account, event = string.match(found["value"], "^([0-9]+)/events/(.+)$")
@@ -179,7 +179,8 @@ allowed = function(url, parenturl)
     return true
   end
 
-  if string.match(url, "^https?://[^/]+/events/[0-9]+$") then
+  if string.match(url, "^https?://[^/]+/events/[0-9]+$")
+    or string.match(url, "^https?://[^/]+/oembed%?url=") then
     return false
   end
 
@@ -301,7 +302,12 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     newurl = decode_codepoint(newurl)
     newurl = fix_case(newurl)
     local origurl = url
-    if string.len(url) == 0 or string.len(newurl) == 0 then
+    if string.len(url) == 0
+      or string.len(newurl) == 0
+      or (
+        string.match(origurl, "/player%?width=")
+        and string.match(newurl, "%.m3u8")
+      ) then
       return nil
     end
     local url = string.match(newurl, "^([^#]+)")
@@ -312,6 +318,9 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     if not processed(url_)
       and not processed(url_ .. "/")
       and allowed(url_, origurl) then
+      if string.match(url_, "%.m3u8") then
+        context["m3u8"][url_] = true
+      end
       local headers = {}
       table.insert(urls, {
         url=url_,
@@ -424,7 +433,8 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
 
   if allowed(url)
     and status_code < 300
-    and item_type ~= "asset" then
+    and item_type ~= "asset"
+    and not string.match(url, "^https?://vod%.livestream%.com/.+%.ts") then
     html = read_file(file)
     if string.match(html, "^%s*{") then
       json = cjson.decode(html)
@@ -551,12 +561,60 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       end
     end
     if string.match(url, "%.m3u8") then
+      local count = 0
+      local chosen = nil
       for line in string.gmatch(html, "([^\n]+)") do
+        local quality = string.match(line, "^#.-BANDWIDTH=([0-9]+)")
+        if quality then
+          quality = tonumber(quality)
+          if not chosen or quality > chosen["quality"] then
+            chosen = {["quality"]=quality}
+          end
+        end
         if not string.match(line, "^#") then
           line = urlparse.absolute(url, line)
           ids[line] = true
-          check(line)
+          if string.match(line, "%.m3u8") then
+            if not chosen["quality"] then
+              error("No quality found before m3u8.")
+            end
+            if not chosen["url"] then
+              chosen["url"] = line
+            end
+          else
+            if not context["ts"][line] then
+              count = count + 1
+            end
+            context["ts"][line] = true
+          end
         end
+      end
+      if chosen then
+        check(chosen["url"])
+      end
+      if count > 0 then
+        print("Stored " .. tostring(count) .. " video URLs.")
+      end
+      local queue_ts = true
+      for _, v in pairs(context["m3u8"]) do
+        if v then
+          queue_ts = false
+          break
+        end
+      end
+      if queue_ts then
+        print("All m3u8 retrieved, queueing videos files.")
+        local count = 0
+        for k, v in pairs(context["ts"]) do
+          if not v then
+            error("Expected .ts files to not be queued yet.")
+          end
+          count = count + 1
+          ids[k] = true
+          check(k)
+          context["ts"][k] = false
+        end
+        print("Queued " .. tostring(count) .. " video URLs.")
       end
     end
     if string.match(url, "/events/[0-9]+/feed%.json") then
@@ -740,6 +798,13 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       tries = 0
       return wget.actions.EXIT
     end
+    if string.match(newloc, "%.m3u8") then
+      context["m3u8"][newloc] = true
+    end
+  end
+
+  if string.match(url["url"], "%.m3u8") then
+    context["m3u8"][url["url"]] = false
   end
 
   tries = 0
@@ -806,6 +871,13 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
 end
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)
+  for _, table_k in pairs({"m3u8", "ts"}) do
+    for k, v in pairs(context[table_k]) do
+      if v then
+        return wget.exits.IO_FAIL
+      end
+    end
+  end
   if killgrab then
     return wget.exits.IO_FAIL
   end
