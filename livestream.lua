@@ -306,6 +306,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       or string.len(newurl) == 0
       or (
         string.match(origurl, "/player%?width=")
+        and not string.match(origurl, "/player%?width=640&height=360&enableInfo=true&defaultDrawer=&autoPlay=true&mute=false")
         and string.match(newurl, "%.m3u8")
       ) then
       return nil
