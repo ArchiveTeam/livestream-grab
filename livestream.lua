@@ -294,6 +294,9 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   end
 
   local function check(newurl)
+    if not string.match(newurl, "^https?://") then
+      return nil
+    end
     local post_body = nil
     local post_url = nil
     if not newurl then
@@ -673,10 +676,18 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       end
     end
     for newurl in string.gmatch(string.gsub(html, "&[qQ][uU][oO][tT];", '"'), '([^"]+)') do
-      checknewurl(newurl)
+      if json then
+        check(newurl)
+      else
+        checknewurl(newurl)
+      end
     end
     for newurl in string.gmatch(string.gsub(html, "&#039;", "'"), "([^']+)") do
-      checknewurl(newurl)
+      if json then
+        check(newurl)
+      else
+        checknewurl(newurl)
+      end
     end
     for newurl in string.gmatch(html, "[^%-]href='([^']+)'") do
       checknewshorturl(newurl)
@@ -710,6 +721,14 @@ wget.callbacks.write_to_warc = function(url, http_stat)
   is_initial_url = false
   if http_stat["statcode"] ~= 200
     and http_stat["statcode"] ~= 301
+    and (
+      not string.match(url["url"], "%.m3u8")
+      or http_stat["statcode"] ~= 302
+    )
+    and (
+      not string.match(url["url"], "/accounts/[0-9]+/events/[0-9]+/place$")
+      or http_stat["statcode"] ~= 404
+    )
     and (
       not string.match(url["url"], "/follow[ei][rn][sg]%?page=[0-9]+&maxItems=[0-9]+$")
       or http_stat["statcode"] ~= 400
@@ -766,6 +785,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     local maxtries = 5
     if (
       string.match(url["url"], "/api/accounts/[0-9]+$")
+      or string.match(url["url"], "/api/accounts/[0-9]+/events/[0-9}+/videos/[0-9]+$")
       or item_type == "asset"
     )
       and status_code == 404 then
