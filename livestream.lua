@@ -764,7 +764,10 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:flush()
     tries = tries + 1
     local maxtries = 5
-    if string.match(url["url"], "/api/accounts/[0-9]+$")
+    if (
+      string.match(url["url"], "/api/accounts/[0-9]+$")
+      or item_type == "asset"
+    )
       and status_code == 404 then
       tries = 6
     end
