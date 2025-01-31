@@ -754,6 +754,11 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   end
   logged_response = false
 
+  if item_type ~= "asset"
+    and not string.match(url["url"], "^https?://vod%.livestream%.com/.") then
+    os.execute("sleep 5")
+  end
+
   if killgrab then
     return wget.actions.ABORT
   end
@@ -776,7 +781,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:write("Server returned bad response. ")
     io.stdout:flush()
     tries = tries + 1
-    local maxtries = 5
+    local maxtries = 11
     if tries > maxtries then
       io.stdout:write(" Skipping.\n")
       io.stdout:flush()
