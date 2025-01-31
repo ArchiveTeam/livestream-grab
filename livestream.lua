@@ -184,6 +184,11 @@ allowed = function(url, parenturl)
     return false
   end
 
+  if parenturl and string.match(parenturl, "%?t=[0-9]+$")
+    and string.match(url, "%?t=[0-9]+$") then
+    return false
+  end
+
   local skip = false
   for pattern, type_ in pairs({
     ["/accounts/([0-9]+/events/[0-9]+)$"]="event",
@@ -782,6 +787,10 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:flush()
     tries = tries + 1
     local maxtries = 11
+    if status_code == 401 or status_code == 403 then
+      os.execute("sleep 60")
+      tries = maxtries + 1
+    end
     if tries > maxtries then
       io.stdout:write(" Skipping.\n")
       io.stdout:flush()
