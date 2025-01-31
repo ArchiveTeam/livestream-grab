@@ -756,7 +756,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
 
   if item_type ~= "asset"
     and not string.match(url["url"], "^https?://vod%.livestream%.com/.") then
-    os.execute("sleep 5")
+    os.execute("sleep 1")
   end
 
   if killgrab then
