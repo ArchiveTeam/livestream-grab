@@ -730,6 +730,7 @@ wget.callbacks.write_to_warc = function(url, http_stat)
       not string.match(url["url"], "%.m3u8")
       or http_stat["statcode"] ~= 302
     )
+    and http_stat["statcode"] ~= 415
     and http_stat["statcode"] ~= 404
     and http_stat["statcode"] ~= 401
     and http_stat["statcode"] ~= 400 then
@@ -896,6 +897,9 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
 end
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)
+  if exit_status_string == "SERVER_AUTH_FAIL" then
+    exit_status = 0
+  end
   for _, table_k in pairs({"m3u8", "ts"}) do
     for k, v in pairs(context[table_k]) do
       if v then
